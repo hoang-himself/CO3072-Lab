@@ -1,0 +1,92 @@
+networks:
+  zabbix-shared:
+
+volumes:
+  timescaledb-data:
+  zabbix-snmptraps:
+  zabbix-snmpmibs:
+
+services:
+  timescaledb:
+    image: docker.io/timescale/timescaledb:latest-pg14
+    container_name: timescaledb
+    restart: unless-stopped
+    networks:
+      - zabbix-shared
+    ports:
+      - 5432:5432
+    volumes:
+      - timescaledb-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=postgres
+
+  zabbix-snmptraps:
+    image: docker.io/zabbix/zabbix-snmptraps:alpine-trunk
+    container_name: zabbix-snmptraps
+    restart: unless-stopped
+    networks:
+      - zabbix-shared
+    ports:
+      - 1162:1162/udp
+    volumes:
+      - zabbix-snmptraps:/var/lib/zabbix/snmptraps:rw
+      - zabbix-snmpmibs:/usr/share/snmp/mibs:ro
+
+  zabbix-server:
+    image: docker.io/zabbix/zabbix-server-pgsql:alpine-trunk
+    container_name: zabbix-server
+    restart: unless-stopped
+    networks:
+      - zabbix-shared
+    ports:
+      - 10051:10051
+    volumes:
+      - zabbix-snmptraps:/var/lib/zabbix/snmptraps:rw
+      - zabbix-snmpmibs:/usr/share/snmp/mibs:ro
+    environment:
+      - DB_SERVER_HOST=timescaledb
+      - POSTGRES_USER=student04
+      - POSTGRES_PASSWORD=student04
+      - POSTGRES_DB=student04
+    depends_on:
+      - timescaledb
+      - zabbix-snmptraps
+
+  zabbix-frontend:
+    image: docker.io/zabbix/zabbix-web-nginx-pgsql:alpine-trunk
+    container_name: zabbix-frontend
+    restart: unless-stopped
+    networks:
+      - zabbix-shared
+    ports:
+      - 8080:8080
+      - 8443:8443
+    environment:
+      - DB_SERVER_HOST=timescaledb
+      - POSTGRES_DB=student04
+      - POSTGRES_USER=student04
+      - POSTGRES_PASSWORD=student04
+      - ZBX_SERVER_HOST=zabbix-server
+      - PHP_TZ=Asia/Ho_Chi_Minh
+    depends_on:
+      - timescaledb
+      - zabbix-server
+
+  # 10.1.9.11
+  # 10.1.9.12
+  # 10.1.9.13
+  zabbix-agent:
+    image: docker.io/zabbix/zabbix-agent:alpine-trunk
+    container_name: zabbix-agent
+    restart: unless-stopped
+    networks:
+      - zabbix-shared
+    volumes:
+      - ./first.custom.conf:/etc/zabbix/zabbix_agentd.d/first.custom.conf:ro
+    environment:
+      - ZBX_HOSTNAME=zabbix-agent
+      - ZBX_SERVER_HOST=zabbix-server
+    # deploy:
+    #   mode: replicated
+    #   replicas: 3
+    #   endpoint_mode: vip

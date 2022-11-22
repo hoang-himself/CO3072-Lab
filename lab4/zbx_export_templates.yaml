@@ -1,0 +1,29 @@
+zabbix_export:
+  version: '6.4'
+  date: '2022-11-27T14:37:03Z'
+  template_groups:
+    -
+      uuid: 02e4df4f20b848e79267641790f241da
+      name: Templates/Virtualization
+  templates:
+    -
+      uuid: a67728e3280449bcb7ed861222e631cf
+      template: TemplateX
+      name: TemplateX
+      templates:
+        -
+          name: 'Docker by Zabbix agent 2'
+      groups:
+        -
+          name: Templates/Virtualization
+      items:
+        -
+          uuid: a8943362060947328f1e8dae387db6de
+          name: first.custom
+          key: first.custom
+        -
+          uuid: 3da0005a66ca4ae8bc47d61c3e28efd9
+          name: second.custom
+          type: TRAP
+          key: second.custom
+          delay: '0'
